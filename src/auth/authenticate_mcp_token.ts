@@ -21,6 +21,16 @@ type TokenRow = {
   plan: string
 }
 
+type OAuthAccessTokenRow = {
+  id: string
+  user_id: string
+  scopes: string[] | string
+  expires_at: Date
+  revoked_at: Date | null
+  email: string
+  plan: string
+}
+
 export class McpAuthError extends Error {
   status: number
   code: string
@@ -38,6 +48,11 @@ export async function authenticateMcpToken(authorizationHeader: string | undefin
   }
 
   const token = authorizationHeader.slice("Bearer ".length).trim()
+
+  if (token.startsWith("pp_oat_")) {
+    return authenticateOAuthAccessToken(token)
+  }
+
   if (!token.startsWith("pp_mcp_") || token.length < 30) {
     throw new McpAuthError(401, "invalid_token", "Invalid MCP token")
   }
@@ -66,6 +81,39 @@ export async function authenticateMcpToken(authorizationHeader: string | undefin
 
   return {
     token_id: row.id,
+    user_id: row.user_id,
+    email: row.email,
+    plan: row.plan,
+    scopes: normalizeScopes(row.scopes),
+  }
+}
+
+async function authenticateOAuthAccessToken(token: string): Promise<McpAuthContext> {
+  const rows = await prisma.$queryRawUnsafe<OAuthAccessTokenRow[]>(
+    `
+      SELECT t.id, t.user_id, t.scopes, t.expires_at, t.revoked_at, u.email, u.plan
+      FROM "McpOAuthAccessToken" t
+      JOIN "User" u ON u.id = t.user_id
+      WHERE t.token_hash = $1
+      LIMIT 1
+    `,
+    hashToken(token),
+  )
+  const row = rows[0]
+
+  if (!row) throw new McpAuthError(401, "invalid_token", "Invalid OAuth access token")
+  if (row.revoked_at) throw new McpAuthError(401, "revoked_token", "OAuth access token is revoked")
+  if (row.expires_at.getTime() <= Date.now()) {
+    throw new McpAuthError(401, "expired_token", "OAuth access token is expired")
+  }
+
+  await prisma.$executeRawUnsafe(
+    `UPDATE "McpOAuthAccessToken" SET last_used_at = now() WHERE id = $1`,
+    row.id,
+  )
+
+  return {
+    token_id: `oauth_access:${row.id}`,
     user_id: row.user_id,
     email: row.email,
     plan: row.plan,

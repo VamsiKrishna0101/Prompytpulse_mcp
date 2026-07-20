@@ -21,7 +21,7 @@ export async function writeAuditLog(input: {
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       `,
       crypto.randomUUID(),
-      input.auth?.token_id ?? null,
+      input.auth?.token_id?.startsWith("oauth_access:") ? null : input.auth?.token_id ?? null,
       input.auth?.user_id ?? null,
       input.tool_name ?? null,
       input.project_id ?? null,

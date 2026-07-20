@@ -5,6 +5,7 @@ import { enforceRateLimit, McpRateLimitError } from "./auth/rate_limit"
 import { jsonRpcError, jsonRpcResult, type JsonRpcRequest } from "./shared/json"
 import { callTool, listToolsForAuth } from "./tools/registry"
 import { writeAuditLog } from "./security/audit_log"
+import { tryHandleOAuthRequest } from "./oauth/router"
 
 const PORT = Number(process.env.PORT ?? process.env.MCP_PORT ?? 3030)
 const MAX_BODY_BYTES = Number(process.env.MCP_MAX_BODY_BYTES ?? 256_000)
@@ -15,6 +16,10 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "GET" && req.url === "/health") {
     return sendJson(res, 200, { status: "ok", service: "promptpulse-mcp" })
+  }
+
+  if (await tryHandleOAuthRequest(req, res)) {
+    return
   }
 
   if (req.method !== "POST" || req.url !== "/mcp") {

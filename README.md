@@ -54,6 +54,7 @@ NODE_ENV=production
 Optional env:
 
 ```env
+MCP_PUBLIC_BASE_URL=https://YOUR_MCP_SERVICE_URL
 MCP_MAX_BODY_BYTES=256000
 MCP_TOKEN_RATE_LIMIT_PER_MINUTE=60
 MCP_USER_RATE_LIMIT_PER_HOUR=500
@@ -72,10 +73,40 @@ Use this as the MCP endpoint:
 https://YOUR_MCP_URL/mcp
 ```
 
+## OAuth for Claude web
+
+Claude web custom connectors require OAuth. This server exposes the required discovery, registration, authorize, and token endpoints:
+
+```text
+GET  /.well-known/oauth-protected-resource
+GET  /.well-known/oauth-authorization-server
+POST /oauth/register
+GET  /oauth/authorize
+POST /oauth/authorize
+POST /oauth/token
+```
+
+After deploying this version, run the migration once against production:
+
+```powershell
+cd C:\Users\vklvl\projects\germany_project\mcp
+npm run migrate
+```
+
+Then in Claude, add a custom connector with:
+
+```text
+https://YOUR_MCP_URL/mcp
+```
+
+Claude will open a PromptPulse authorization page. For this first OAuth bridge, paste an existing `pp_mcp_...` token to approve access. The OAuth access and refresh tokens issued to Claude are stored hashed and scoped to that PromptPulse user.
+
 ## Security v1
 
 - Bearer token authentication on every MCP request.
+- OAuth 2.1-style authorization-code flow for remote MCP clients such as Claude web.
 - MCP tokens are stored as SHA-256 hashes only.
+- OAuth authorization codes, access tokens, and refresh tokens are stored as SHA-256 hashes only.
 - Read-only tools only.
 - Project ownership is checked server-side for every project-scoped tool.
 - Scopes are checked per tool.
