@@ -1,0 +1,26 @@
+{
+  "name": "promptpulse-mcp",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "postinstall": "prisma generate --schema=prisma/schema.prisma",
+    "start": "tsx src/server.ts",
+    "migrate": "tsx src/scripts/migrate.ts",
+    "create-token": "tsx src/scripts/create_token.ts",
+    "smoke": "tsx src/scripts/smoke_test.ts",
+    "smoke:server": "tsx src/scripts/smoke_with_server.ts"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "pg": "^8.22.0",
+    "prisma": "^7.8.0",
+    "tsx": "^4.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.1",
+    "@types/pg": "^8.20.0",
+    "typescript": "^6.0.3"
+  }
+}
