@@ -8,7 +8,7 @@ type Bucket = {
 const buckets = new Map<string, Bucket>()
 
 const TOKEN_LIMIT_PER_MINUTE = Number(process.env.MCP_TOKEN_RATE_LIMIT_PER_MINUTE ?? 60)
-const USER_LIMIT_PER_HOUR = Number(process.env.MCP_USER_RATE_LIMIT_PER_HOUR ?? 500)
+const USER_LIMIT_PER_HOUR = Number(process.env.MCP_USER_RATE_LIMIT_PER_HOUR ?? 150)
 const TOOL_LIMIT_PER_MINUTE = Number(process.env.MCP_TOOL_RATE_LIMIT_PER_MINUTE ?? 40)
 
 export class McpRateLimitError extends Error {
