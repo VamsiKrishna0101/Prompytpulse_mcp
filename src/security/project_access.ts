@@ -2,7 +2,22 @@ import prisma from "../shared/prisma"
 
 export async function assertProjectAccess(project_id: string, user_id: string) {
   const project = await prisma.project.findFirst({
-    where: { id: project_id, user_id },
+    where: {
+      id: project_id,
+      OR: [
+        { user_id },
+        {
+          user: {
+            client_links: {
+              some: {
+                agency_user_id: user_id,
+                status: "ACTIVE",
+              },
+            },
+          },
+        },
+      ],
+    },
     select: {
       id: true,
       brand_name: true,

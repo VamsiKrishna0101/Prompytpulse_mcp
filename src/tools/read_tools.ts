@@ -3,15 +3,37 @@ import { assertProjectAccess } from "../security/project_access"
 import type { McpAuthContext } from "../auth/authenticate_mcp_token"
 import { optionalLimit, optionalString, readObject, requireString } from "./input"
 
-export async function getProjects(auth: McpAuthContext) {
+export async function getProjects(auth: McpAuthContext, rawArgs: unknown) {
+  const args = readObject(rawArgs)
+  const client_user_id = optionalString(args, "client_user_id")
+
+  let user_id_condition: any = auth.user_id
+
+  if (auth.account_type === "AGENCY") {
+    if (client_user_id) {
+      // Fetch only for the specified client
+      user_id_condition = client_user_id
+    } else {
+      // Fetch own projects + all active client projects
+      const links = await prisma.$queryRawUnsafe<{ client_user_id: string }[]>(
+        `SELECT client_user_id FROM "AgencyClientLink" WHERE agency_user_id = $1 AND status = 'ACTIVE'`,
+        auth.user_id,
+      )
+      user_id_condition = { in: [auth.user_id, ...links.map(l => l.client_user_id)] }
+    }
+  } else if (client_user_id) {
+    throw new Error("client_user_id can only be used by AGENCY accounts")
+  }
+
   const projects = await prisma.project.findMany({
-    where: { user_id: auth.user_id },
+    where: { user_id: user_id_condition },
     orderBy: { updated_at: "desc" },
     select: {
       id: true,
       brand_name: true,
       brand_url: true,
       brand_location: true,
+      user_id: true,
       created_at: true,
       updated_at: true,
       _count: {

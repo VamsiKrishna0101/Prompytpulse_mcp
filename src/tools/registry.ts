@@ -13,10 +13,27 @@ import {
   getTopSources,
 } from "./read_tools"
 
+// ─── SEO Intelligence
+import { getAiReports } from "./seo/ai_reports"
+import { getBrandMentions } from "./seo/brand_mentions"
+import { getPromptVisibilityBreakdown } from "./seo/prompt_visibility"
+
+// ─── GEO Intelligence
+import { getGeoVariants } from "./geo/geo_variants"
+import { getGeoVisibility } from "./geo/geo_visibility"
+
+// ─── Content
+import { getContentBriefs } from "./content/content_briefs"
+
+// ─── Reddit Analytics
+import { getRedditIntelligence } from "./reddit/reddit_intelligence"
+import { getRedditPosts } from "./reddit/reddit_posts"
+
 type ToolHandler = (auth: McpAuthContext, args: unknown) => Promise<unknown>
 
 const HANDLERS: Record<string, ToolHandler> = {
-  get_projects: async (auth) => getProjects(auth),
+  // Core tools
+  get_projects: getProjects,
   get_project_overview: getProjectOverview,
   get_top_sources: getTopSources,
   get_source_urls: getSourceUrls,
@@ -24,6 +41,22 @@ const HANDLERS: Record<string, ToolHandler> = {
   get_prompt_performance: getPromptPerformance,
   get_action_queue: getActionQueue,
   get_reports: getReports,
+
+  // SEO Intelligence
+  get_ai_reports: getAiReports,
+  get_brand_mentions: getBrandMentions,
+  get_prompt_visibility_breakdown: getPromptVisibilityBreakdown,
+
+  // GEO Intelligence
+  get_geo_variants: getGeoVariants,
+  get_geo_visibility: getGeoVisibility,
+
+  // Content
+  get_content_briefs: getContentBriefs,
+
+  // Analytics
+  get_reddit_intelligence: getRedditIntelligence,
+  get_reddit_posts: getRedditPosts,
 }
 
 export function listToolsForAuth(auth: McpAuthContext) {

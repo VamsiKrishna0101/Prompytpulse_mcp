@@ -21,9 +21,12 @@ export class McpRateLimitError extends Error {
 }
 
 export function enforceRateLimit(auth: McpAuthContext, toolName: string | null) {
-  consume(`token:${auth.token_id}:minute`, TOKEN_LIMIT_PER_MINUTE, 60_000)
-  consume(`user:${auth.user_id}:hour`, USER_LIMIT_PER_HOUR, 3_600_000)
-  if (toolName) consume(`token:${auth.token_id}:tool:${toolName}:minute`, TOOL_LIMIT_PER_MINUTE, 60_000)
+  const isAgency = auth.account_type === "AGENCY"
+  const multiplier = isAgency ? 10 : 1
+
+  consume(`token:${auth.token_id}:minute`, TOKEN_LIMIT_PER_MINUTE * multiplier, 60_000)
+  consume(`user:${auth.user_id}:hour`, USER_LIMIT_PER_HOUR * multiplier, 3_600_000)
+  if (toolName) consume(`token:${auth.token_id}:tool:${toolName}:minute`, TOOL_LIMIT_PER_MINUTE * multiplier, 60_000)
 }
 
 function consume(key: string, limit: number, windowMs: number) {

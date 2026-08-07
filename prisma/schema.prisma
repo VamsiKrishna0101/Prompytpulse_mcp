@@ -21,6 +21,7 @@ enum Plan {
   STARTER
   GROWTH
   PRO
+  AGENCY
 }
 
 enum SubscriptionStatus {
@@ -146,6 +147,7 @@ model User {
   account_type   AccountType
   role           UserRole    @default(USER)
   plan           Plan        @default(FREE)
+  credits_balance Int         @default(0)
   product_tour_completed Boolean @default(false)
   product_tour_completed_at DateTime?
   created_at     DateTime    @default(now())
@@ -156,6 +158,8 @@ model User {
   subscriptions  Subscription[]
   plan_usages    PlanUsage[]
   credit_ledger_entries CreditLedgerEntry[]
+  credit_transactions  CreditTransaction[]
+  razorpay_orders      RazorpayOrder[]
   helpcenter     HelpCenter[]
   ai_reports     AIReport[]
   content_briefs ContentBrief[]
@@ -165,11 +169,14 @@ model User {
   reddit_posts RedditPost[]
   brand_preferences BrandPreference[]
   billing_invoices BillingInvoice[]
+  // Agency relations
+  agency_links   AgencyClientLink[] @relation("AgencyLinks")
+  client_links   AgencyClientLink[] @relation("ClientLinks")
 }
 
 model Project {
   id             String       @id @default(uuid())
-  brand_name     String       @unique
+  brand_name     String
   brand_url      String
   brand_location String
   user_id        String
@@ -192,7 +199,25 @@ model Project {
   reddit_posts RedditPost[]
   brand_preference BrandPreference?
 
+  @@unique([user_id, brand_name])
   @@index([user_id, created_at])
+}
+
+// Agency: links an agency user to a managed client user
+model AgencyClientLink {
+  id              String   @id @default(uuid())
+  agency_user_id  String
+  agency_user     User     @relation("AgencyLinks", fields: [agency_user_id], references: [id], onDelete: Cascade)
+  client_user_id  String
+  client_user     User     @relation("ClientLinks", fields: [client_user_id], references: [id], onDelete: Cascade)
+  role            String   @default("CLIENT")  // reserved for future sub-roles
+  status          String   @default("ACTIVE")  // ACTIVE | SUSPENDED
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  @@unique([agency_user_id, client_user_id])
+  @@index([agency_user_id, status])
+  @@index([client_user_id])
 }
 
 model BrandPreference {
@@ -936,4 +961,37 @@ model PublicChatLead {
   @@index([email, created_at])
   @@index([topic, created_at])
   @@index([created_at])
+}
+
+// PAYG Credits System
+
+model CreditTransaction {
+  id          String   @id @default(uuid())
+  user_id     String
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  amount      Int      // positive = added, negative = deducted
+  action      String   // e.g. 'TOPUP', 'REDDIT_SCAN', 'PROMPT_RUN', 'SIGNUP_BONUS'
+  description String?
+  metadata    Json?
+  created_at  DateTime @default(now())
+
+  @@index([user_id, created_at])
+  @@index([user_id, action])
+}
+
+model RazorpayOrder {
+  id                  String   @id @default(uuid())
+  user_id             String
+  user                User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  razorpay_order_id   String   @unique
+  razorpay_payment_id String?  @unique
+  amount_inr_paise    Int      // amount in paise (100 paise = ₹1)
+  credits_to_award    Int
+  status              String   @default("PENDING") // PENDING | PAID | FAILED
+  idempotency_key     String?  @unique
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  @@index([user_id, created_at])
+  @@index([status, created_at])
 }

@@ -6,6 +6,7 @@ export type McpAuthContext = {
   user_id: string
   email: string
   plan: string
+  account_type: string
   scopes: string[]
 }
 
@@ -19,6 +20,7 @@ type TokenRow = {
   revoked_at: Date | null
   email: string
   plan: string
+  account_type: string
 }
 
 type OAuthAccessTokenRow = {
@@ -29,6 +31,7 @@ type OAuthAccessTokenRow = {
   revoked_at: Date | null
   email: string
   plan: string
+  account_type: string
 }
 
 export class McpAuthError extends Error {
@@ -60,7 +63,7 @@ export async function authenticateMcpToken(authorizationHeader: string | undefin
   const tokenHash = hashToken(token)
   const rows = await prisma.$queryRawUnsafe<TokenRow[]>(
     `
-      SELECT t.id, t.user_id, t.name, t.scopes, t.status, t.expires_at, t.revoked_at, u.email, u.plan
+      SELECT t.id, t.user_id, t.name, t.scopes, t.status, t.expires_at, t.revoked_at, u.email, u.plan, u.account_type
       FROM "McpToken" t
       JOIN "User" u ON u.id = t.user_id
       WHERE t.token_hash = $1
@@ -84,6 +87,7 @@ export async function authenticateMcpToken(authorizationHeader: string | undefin
     user_id: row.user_id,
     email: row.email,
     plan: row.plan,
+    account_type: row.account_type,
     scopes: normalizeScopes(row.scopes),
   }
 }
@@ -91,7 +95,7 @@ export async function authenticateMcpToken(authorizationHeader: string | undefin
 async function authenticateOAuthAccessToken(token: string): Promise<McpAuthContext> {
   const rows = await prisma.$queryRawUnsafe<OAuthAccessTokenRow[]>(
     `
-      SELECT t.id, t.user_id, t.scopes, t.expires_at, t.revoked_at, u.email, u.plan
+      SELECT t.id, t.user_id, t.scopes, t.expires_at, t.revoked_at, u.email, u.plan, u.account_type
       FROM "McpOAuthAccessToken" t
       JOIN "User" u ON u.id = t.user_id
       WHERE t.token_hash = $1
@@ -117,6 +121,7 @@ async function authenticateOAuthAccessToken(token: string): Promise<McpAuthConte
     user_id: row.user_id,
     email: row.email,
     plan: row.plan,
+    account_type: row.account_type,
     scopes: normalizeScopes(row.scopes),
   }
 }
